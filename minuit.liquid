@@ -41,10 +41,10 @@
   <div class="mn-poster-col">
     {% comment %} Poster du premier film avec showtimes — UN SEUL {% endcomment %}
     {% assign poster_done = false %}
-    {% for theater in data.theaters %}
+    {% for theater in theaters %}
       {% for film in theater.films %}
         {% if poster_done == false and film.posterUrl and film.showtimes.size > 0 %}
-          <img src="{{ base }}{{ film.posterUrl }}" />
+          <img src="{{ base }}{{ film.posterUrl }}" class="image-dither" />
           <div class="mn-poster-label">★ {{ film.title }}</div>
           {% assign poster_done = true %}
         {% endif %}
@@ -53,11 +53,11 @@
   </div>
 
   <div class="mn-list-col">
-    <div class="mn-hero-date">{{ data.displayDate }}</div>
+    <div class="mn-hero-date">{{ displayDate }}</div>
 
     {% comment %} Séance vedette : titre + horaires du film postérisé {% endcomment %}
     {% assign featured_count = 0 %}
-    {% for theater in data.theaters %}
+    {% for theater in theaters %}
       {% for film in theater.films %}
         {% if featured_count == 0 and film.posterUrl and film.showtimes.size > 0 %}
           <div class="mn-pick-title">{{ film.title }}</div>
@@ -73,7 +73,7 @@
 
     {% assign count = 0 %}
     {% assign shown = 0 %}
-    {% for theater in data.theaters %}
+    {% for theater in theaters %}
       {% if shown < 4 %}
         {% if theater.films.size > 0 %}
           <div class="mn-theater">{{ theater.name }}</div>

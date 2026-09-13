@@ -1,83 +1,101 @@
 {% comment %}
   Minuit x TRMNL — séances de cinéma de Strasbourg
   Source: https://minuit.wyliam.fr (API publique, cache-first)
+  Layout: poster à gauche pleine hauteur, séances à droite
   Variable attendue: data = GET /api/v1/theater (JSON de la journée)
 {% endcomment %}
 
 {% assign base = 'https://minuit.wyliam.fr' %}
 
 <style>
-  /* Tout en sans-serif */
   .screen, .screen * { font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif !important; }
 
-  .mn-hero { display: flex; align-items: center; gap: 16px; padding: 8px 0 10px; border-bottom: 2px solid #000; }
-  .mn-poster img { width: 110px; height: 165px; object-fit: cover; border: 2px solid #000; }
-  .mn-hero-info { flex: 1; }
-  .mn-hero-date { font-size: 28px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; }
-  .mn-film-pick { font-size: 13px; font-weight: 600; color: #fff; background: #1a1a1a; display: inline-block; padding: 2px 8px; }
-  .mn-pick-title { font-size: 24px; font-weight: 700; line-height: 1.1; margin: 4px 0; text-transform: uppercase; }
-  .mn-pick-times { font-size: 18px; font-weight: 600; }
+  .mn-split { display: flex; height: 100%; width: 100%; }
+
+  .mn-poster-col {
+    width: 262px; height: 480px; flex-shrink: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    border-right: 3px solid #000; background: #fff;
+  }
+  .mn-poster-col img { max-width: 230px; max-height: 400px; object-fit: contain; border: 2px solid #000; }
+  .mn-poster-label { margin-top: 8px; font-size: 12px; font-weight: 600; color: #333; text-align: center; padding: 0 16px; }
+
+  .mn-list-col { flex: 1; padding: 10px 14px; overflow: hidden; }
+  .mn-hero-date { font-size: 18px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; margin-bottom: 2px; }
+  .mn-pick-title { font-size: 24px; font-weight: 700; line-height: 1.1; margin: 2px 0; text-transform: uppercase; }
+  .mn-pick-times { font-size: 15px; font-weight: 600; margin-bottom: 2px; }
+  .mn-pick-label { font-size: 11px; font-weight: 600; color: #fff; background: #1a1a1a; display: inline-block; padding: 1px 6px; }
+
+  .mn-theater { background: #1a1a1a; color: #fff; padding: 2px 8px; font-weight: 700; font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; display: inline-block; margin: 5px 0 2px; }
 
   .mn-row {
     display: flex; justify-content: space-between; align-items: baseline;
-    border-bottom: 1px solid #999; padding: 3px 0; font-size: 14px;
+    border-bottom: 1px solid #aaa; padding: 2px 0; font-size: 13px;
   }
   .mn-title { font-weight: 700; text-transform: uppercase; }
   .mn-times { font-weight: 500; white-space: nowrap; }
-  .mn-theater { background: #1a1a1a; color: #fff; padding: 2px 10px; font-weight: 700; font-size: 13px; letter-spacing: 0.05em; text-transform: uppercase; display: inline-block; margin-top: 4px; }
-  .mn-foot { display: flex; justify-content: space-between; margin-top: 6px; font-size: 12px; color: #444; }
+  .mn-foot { display: flex; justify-content: space-between; margin-top: 4px; font-size: 11px; color: #444; }
 </style>
 
-<div class="mn-wrap">
-  {% comment %} Film vedette : premier film avec poster → brother affiché en hero {% endcomment %}
-  {% assign featured = null %}
-  {% assign ftimes = '' %}
-  {% for theater in data.theaters %}
-    {% for film in theater.films %}
-      {% if featured == null and film.posterUrl and film.showtimes.size > 0 %}
-        {% assign featured = film %}
-        {% assign posteur = film.posterUrl %}
-        {% assign ftimes = film.showtimes | map: 'time' | join: ' · ' %}
-      {% endif %}
+<div class="mn-split">
+  <div class="mn-poster-col">
+    {% comment %} Poster du premier film avec showtimes — UN SEUL {% endcomment %}
+    {% assign poster_done = false %}
+    {% for theater in data.theaters %}
+      {% for film in theater.films %}
+        {% if poster_done == false and film.posterUrl and film.showtimes.size > 0 %}
+          <img src="{{ base }}{{ film.posterUrl }}" />
+          <div class="mn-poster-label">★ {{ film.title }}</div>
+          {% assign poster_done = true %}
+        {% endif %}
+      {% endfor %}
     {% endfor %}
-  {% endfor %}
-
-  <div class="mn-hero">
-    {% if posteur %}
-      <div class="mn-poster"><img src="{{ base }}{{ posteur }}" /></div>
-    {% endif %}
-    <div class="mn-hero-info">
-      <span class="mn-film-pick">Séance vedette</span>
-      <div class="mn-pick-title">{{ featured.title }}</div>
-      <div class="mn-pick-times">{{ ftimes }}</div>
-    </div>
   </div>
 
-  <div class="mn-head" style="display:flex;justify-content:space-between;align-items:baseline;margin-top:6px;">
-    <span style="font-size:16px;font-weight:700;">Toutes les séances</span>
-    <span style="font-size:13px;color:#444;">{{ data.displayDate }}</span>
-  </div>
+  <div class="mn-list-col">
+    <div class="mn-hero-date">{{ data.displayDate }}</div>
 
-  {% assign count = 0 %}
-  {% for theater in data.theaters %}
-    {% if theater.films.size > 0 %}
-      <div class="mn-theater">{{ theater.name }}</div>
-      {% for film in theater.films limit: 3 %}
-        <div class="mn-row">
-          <span><span class="mn-title">{{ film.title }}</span>{% if film.format %}<span class="mn-meta">· {{ film.format }}</span>{% endif %}</span>
-          <span class="mn-times">
-            {% for st in film.showtimes limit: 6 %}
+    {% comment %} Séance vedette : titre + horaires du film postérisé {% endcomment %}
+    {% assign featured_count = 0 %}
+    {% for theater in data.theaters %}
+      {% for film in theater.films %}
+        {% if featured_count == 0 and film.posterUrl and film.showtimes.size > 0 %}
+          <div class="mn-pick-title">{{ film.title }}</div>
+          <div class="mn-pick-times">
+            {% for st in film.showtimes limit: 4 %}
               {{ st.time }}{% if st.isVost %}<sup>V</sup>{% endif %}{% if st.isPreview %}<sup>P</sup>{% endif %}{% unless forloop.last %} · {% endunless %}
             {% endfor %}
-          </span>
-        </div>
-        {% assign count = count | plus: 1 %}
+          </div>
+          {% assign featured_count = 1 %}
+        {% endif %}
       {% endfor %}
-    {% endif %}
-  {% endfor %}
+    {% endfor %}
 
-  <div class="mn-foot">
-    <span>minuit.wyliam.fr</span>
-    <span>{{ count }} films · toutes salles</span>
+    {% assign count = 0 %}
+    {% assign shown = 0 %}
+    {% for theater in data.theaters %}
+      {% if shown < 4 %}
+        {% if theater.films.size > 0 %}
+          <div class="mn-theater">{{ theater.name }}</div>
+          {% for film in theater.films limit: 2 %}
+            <div class="mn-row">
+              <span class="mn-title">{{ film.title | truncate: 18 }}</span>
+              <span class="mn-times">
+                {% for st in film.showtimes limit: 3 %}
+                  {{ st.time }}{% if st.isVost %}<sup>V</sup>{% endif %}{% if st.isPreview %}<sup>P</sup>{% endif %}{% unless forloop.last %} · {% endunless %}
+                {% endfor %}
+              </span>
+            </div>
+            {% assign count = count | plus: 1 %}
+          {% endfor %}
+          {% assign shown = shown | plus: 1 %}
+        {% endif %}
+      {% endif %}
+    {% endfor %}
+
+    <div class="mn-foot">
+      <span>toutes les séances</span>
+      <span>minuit.wyliam.fr</span>
+    </div>
   </div>
 </div>

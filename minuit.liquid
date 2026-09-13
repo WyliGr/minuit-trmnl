@@ -1,8 +1,8 @@
 {% comment %}
   Minuit x TRMNL — séances de cinéma de Strasbourg
   Source: https://minuit.wyliam.fr (API publique, cache-first)
-  Layout: poster à gauche pleine hauteur, séances à droite
-  Variable attendue: data = GET /api/v1/theater (JSON de la journée)
+  Structure officielle TRMNL : layout (style custom) + title_bar sibling
+  Variables TRMNL (polling): theaters, displayDate injectées à la racine
 {% endcomment %}
 
 {% assign base = 'https://minuit.wyliam.fr' %}
@@ -10,92 +10,97 @@
 <style>
   .screen, .screen * { font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif !important; }
 
-  .mn-split { display: flex; height: 100%; width: 100%; }
+  .mn-split { display: flex; height: 100%; padding-bottom: 24px; box-sizing: border-box; }
 
   .mn-poster-col {
-    width: 262px; height: 480px; flex-shrink: 0;
+    width: 250px; flex-shrink: 0;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     border-right: 3px solid #000; background: #fff;
   }
-  .mn-poster-col img { max-width: 230px; max-height: 400px; object-fit: contain; border: 2px solid #000; }
+  .mn-poster-col img { max-width: 200px; max-height: 340px; object-fit: contain; border: 2px solid #000; }
   .mn-poster-label { margin-top: 8px; font-size: 12px; font-weight: 600; color: #333; text-align: center; padding: 0 16px; }
 
-  .mn-list-col { flex: 1; padding: 10px 14px; overflow: hidden; }
-  .mn-hero-date { font-size: 18px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; margin-bottom: 2px; }
-  .mn-pick-title { font-size: 24px; font-weight: 700; line-height: 1.1; margin: 2px 0; text-transform: uppercase; }
-  .mn-pick-times { font-size: 15px; font-weight: 600; margin-bottom: 2px; }
-  .mn-pick-label { font-size: 11px; font-weight: 600; color: #fff; background: #1a1a1a; display: inline-block; padding: 1px 6px; }
+  .mn-list-col { flex: 1; padding: 14px 18px; overflow: hidden; }
+  .mn-hero-date { font-size: 17px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; margin-bottom: 6px; }
+  .mn-pick-title { font-size: 22px; font-weight: 700; line-height: 1.1; margin: 4px 0 6px; text-transform: uppercase; }
+  .mn-pick-times { font-size: 14px; font-weight: 600; margin-bottom: 10px; }
 
-  .mn-theater { background: #1a1a1a; color: #fff; padding: 2px 8px; font-weight: 700; font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; display: inline-block; margin: 5px 0 2px; }
+  .mn-theater { background: #1a1a1a; color: #fff; padding: 3px 10px; font-weight: 700; font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; display: inline-block; margin: 8px 0 4px; }
 
   .mn-row {
     display: flex; justify-content: space-between; align-items: baseline;
-    border-bottom: 1px solid #aaa; padding: 2px 0; font-size: 13px;
+    border-bottom: 1px solid #aaa; padding: 4px 0; font-size: 12px;
   }
   .mn-title { font-weight: 700; text-transform: uppercase; }
   .mn-times { font-weight: 500; white-space: nowrap; }
-  .mn-foot { display: flex; justify-content: space-between; margin-top: 4px; font-size: 11px; color: #444; }
+  .mn-foot { display: flex; justify-content: space-between; margin-top: 12px; font-size: 11px; color: #444; }
 </style>
 
-<div class="mn-split">
-  <div class="mn-poster-col">
-    {% comment %} Poster du premier film avec showtimes — UN SEUL {% endcomment %}
-    {% assign poster_done = false %}
-    {% for theater in theaters %}
-      {% for film in theater.films %}
-        {% if poster_done == false and film.posterUrl and film.showtimes.size > 0 %}
-          <img src="{{ base }}{{ film.posterUrl }}" class="image-dither" />
-          <div class="mn-poster-label">★ {{ film.title }}</div>
-          {% assign poster_done = true %}
-        {% endif %}
+<div class="layout layout--col">
+  <div class="mn-split">
+    <div class="mn-poster-col">
+      {% assign poster_done = false %}
+      {% for theater in theaters %}
+        {% for film in theater.films %}
+          {% if poster_done == false and film.posterUrl and film.showtimes.size > 0 %}
+            <img src="{{ base }}{{ film.posterUrl }}" class="image image-dither" />
+            <div class="mn-poster-label">★ {{ film.title }}</div>
+            {% assign poster_done = true %}
+          {% endif %}
+        {% endfor %}
       {% endfor %}
-    {% endfor %}
-  </div>
+    </div>
 
-  <div class="mn-list-col">
-    <div class="mn-hero-date">{{ displayDate }}</div>
+    <div class="mn-list-col">
+      <div class="mn-hero-date">{{ displayDate }}</div>
 
-    {% comment %} Séance vedette : titre + horaires du film postérisé {% endcomment %}
-    {% assign featured_count = 0 %}
-    {% for theater in theaters %}
-      {% for film in theater.films %}
-        {% if featured_count == 0 and film.posterUrl and film.showtimes.size > 0 %}
-          <div class="mn-pick-title">{{ film.title }}</div>
-          <div class="mn-pick-times">
-            {% for st in film.showtimes limit: 4 %}
-              {{ st.time }}{% if st.isVost %}<sup>V</sup>{% endif %}{% if st.isPreview %}<sup>P</sup>{% endif %}{% unless forloop.last %} · {% endunless %}
-            {% endfor %}
-          </div>
-          {% assign featured_count = 1 %}
-        {% endif %}
-      {% endfor %}
-    {% endfor %}
-
-    {% assign count = 0 %}
-    {% assign shown = 0 %}
-    {% for theater in theaters %}
-      {% if shown < 4 %}
-        {% if theater.films.size > 0 %}
-          <div class="mn-theater">{{ theater.name }}</div>
-          {% for film in theater.films limit: 2 %}
-            <div class="mn-row">
-              <span class="mn-title">{{ film.title | truncate: 18 }}</span>
-              <span class="mn-times">
-                {% for st in film.showtimes limit: 3 %}
-                  {{ st.time }}{% if st.isVost %}<sup>V</sup>{% endif %}{% if st.isPreview %}<sup>P</sup>{% endif %}{% unless forloop.last %} · {% endunless %}
-                {% endfor %}
-              </span>
+      {% assign featured_count = 0 %}
+      {% for theater in theaters %}
+        {% for film in theater.films %}
+          {% if featured_count == 0 and film.posterUrl and film.showtimes.size > 0 %}
+            <div class="mn-pick-title">{{ film.title }}</div>
+            <div class="mn-pick-times">
+              {% for st in film.showtimes limit: 4 %}
+                {{ st.time }}{% if st.isVost %}<sup>V</sup>{% endif %}{% if st.isPreview %}<sup>P</sup>{% endif %}{% unless forloop.last %} · {% endunless %}
+              {% endfor %}
             </div>
-            {% assign count = count | plus: 1 %}
-          {% endfor %}
-          {% assign shown = shown | plus: 1 %}
-        {% endif %}
-      {% endif %}
-    {% endfor %}
+            {% assign featured_count = 1 %}
+          {% endif %}
+        {% endfor %}
+      {% endfor %}
 
-    <div class="mn-foot">
-      <span>toutes les séances</span>
-      <span>minuit.wyliam.fr</span>
+      {% assign count = 0 %}
+      {% assign shown = 0 %}
+      {% for theater in theaters %}
+        {% if shown < 4 %}
+          {% if theater.films.size > 0 %}
+            <div class="mn-theater">{{ theater.name }}</div>
+            {% for film in theater.films limit: 2 %}
+              <div class="mn-row">
+                <span class="mn-title">{{ film.title | truncate: 18 }}</span>
+                <span class="mn-times">
+                  {% for st in film.showtimes limit: 3 %}
+                    {{ st.time }}{% if st.isVost %}<sup>V</sup>{% endif %}{% if st.isPreview %}<sup>P</sup>{% endif %}{% unless forloop.last %} · {% endunless %}
+                  {% endfor %}
+                </span>
+              </div>
+              {% assign count = count | plus: 1 %}
+            {% endfor %}
+            {% assign shown = shown | plus: 1 %}
+          {% endif %}
+        {% endif %}
+      {% endfor %}
+
+      <div class="mn-foot">
+        <span>toutes les séances</span>
+        <span>minuit.wyliam.fr</span>
+      </div>
     </div>
   </div>
+</div>
+
+<div class="title_bar">
+  <img class="image image--adaptive" src="https://trmnl.com/images/plugins/trmnl--render.svg" />
+  <span class="title">Minuit</span>
+  <span class="instance">Séances du jour</span>
 </div>

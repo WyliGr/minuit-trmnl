@@ -1,0 +1,51 @@
+{% comment %}
+  Minuit x TRMNL — séances de cinéma de Strasbourg
+  Source: https://minuit.wyliam.fr (API publique, cache-first)
+  Variable attendue: data = GET /api/v1/theater (JSON de la journée)
+  Liste: {{ list }}
+{% endcomment %}
+
+<style>
+  /* overrides du design system TRMNL, style exit-minuit */
+  .mn-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    border-bottom: 1px solid #999; padding: 4px 0;
+  }
+  .mn-title { font-weight: 700; text-transform: uppercase; }
+  .mn-meta { font-size: 0.7em; color: #555; margin-left: 8px; }
+  .mn-times { font-family: monospace; white-space: nowrap; }
+  .mn-theater { background: #1a1a1a; color: #fff; padding: 4px 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+</style>
+
+<div class="mn-wrap">
+  <div class="mn-head">
+    <span class="title">Minuit</span>
+    <span class="mn-meta">{{ data.displayDate }}</span>
+  </div>
+
+  {% assign count = 0 %}
+  {% for theater in data.theaters %}
+    {% if theater.films.size > 0 %}
+      <div class="mn-theater">{{ theater.name }}</div>
+      {% for film in theater.films limit: 4 %}
+        <div class="mn-row">
+          <span>
+            <span class="mn-title">{{ film.title }}</span>
+            {% if show_format %}{% if film.format %}<span class="mn-meta">{{ film.format }}</span>{% endif %}{% endif %}
+          </span>
+          <span class="mn-times">
+            {% for st in film.showtimes limit: 6 %}
+              {{ st.time }}{% if st.isVost %}<sup>V</sup>{% endif %}{% if st.isPreview %}<sup>P</sup>{% endif %}{% unless forloop.last %} · {% endunless %}
+            {% endfor %}
+          </span>
+        </div>
+        {% assign count = count | plus: 1 %}
+      {% endfor %}
+    {% endif %}
+  {% endfor %}
+
+  <div class="mn-foot">
+    <span class="label label--underline">minuit.wyliam.fr</span>
+    <span class="mn-meta">{{ count }} films · toutes salles</span>
+  </div>
+</div>
